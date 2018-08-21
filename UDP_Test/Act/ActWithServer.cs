@@ -11,16 +11,16 @@ namespace UDP_Test.Act
 {
     class ActWithServer
     {
-        private List<UDPSystem> _udpSystem = new List<UDPSystem>();
+        private List<UDPSystem> UDPSystems = new List<UDPSystem>();
         private List<Thread> threads = new List<Thread>();
         public void run()
         {
             IPAddress ip = IPAddress.Any;
             for (int i = 8310; i < 8320; i++)
             {
-                var r = new UDPSystem(8310);
-                _udpSystem.Add(r);
-                threads.Add(new Thread(new ThreadStart(_udpSystem[_udpSystem.Count - 1].Run)));
+                var nextUDP = new UDPSystem(i);
+                UDPSystems.Add(nextUDP);
+                threads.Add(new Thread(new ThreadStart(UDPSystems[UDPSystems.Count - 1].Run)));
                 threads[threads.Count-1].Start();
             }
 
