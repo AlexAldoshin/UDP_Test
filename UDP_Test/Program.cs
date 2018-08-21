@@ -15,7 +15,7 @@ namespace UDP_Test
         static void Main()
         {
             ActWithServer A = new ActWithServer();
-            A._act();
+            A.run();
         }
     }
 }
