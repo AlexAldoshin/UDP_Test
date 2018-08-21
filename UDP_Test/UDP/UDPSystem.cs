@@ -11,17 +11,19 @@ namespace UDP_Test.UDP
 {
     class UDPSystem
     {
+        public int Port;
         private UdpClient ServerIn;
         ServersTo ServersToUsers = new ServersTo();
 
         public UDPSystem(int PORT)
         {
-            
+
+            this.Port = PORT;
             ServerIn = new UdpClient(PORT);
             Console.WriteLine("Port: {0}", PORT);
         }
 
-        private static void ToUserAsync(IPEndPoint IpEP, byte[] data)
+        private static void ToUserAsync(IPEndPoint IpEP, byte[] data, int Port)
         {
             string message = Encoding.ASCII.GetString(data);
             var ParsePacket = new DataPackets.NBIoT(data);
@@ -35,7 +37,7 @@ namespace UDP_Test.UDP
                 Console.WriteLine(e.ToString());
             }
             ServerToUser.Close(); // обязательно закроем
-            Console.WriteLine("User:{0}; {1}", IpEP, ParsePacket);
+            Console.WriteLine("Port:{0}; User:{1}; {2}",Port , IpEP, ParsePacket);
         }
 
         public void Run()
@@ -47,7 +49,7 @@ namespace UDP_Test.UDP
                     //if (Serv.Available==0) Thread.Sleep(2000);
                     IPEndPoint IpEP = null;
                     byte[] data = ServerIn.Receive(ref IpEP); // получаем данные
-                    Task task = new Task(() => ToUserAsync(IpEP, data));
+                    Task task = new Task(() => ToUserAsync(IpEP, data, Port));
                     task.Start();
                 }
             }
