@@ -13,13 +13,13 @@ namespace UDP_Test.Act
     {
         private List<UDPSystem> UDPSystems = new List<UDPSystem>();
         private List<Thread> threads = new List<Thread>();
-        public void _act()
+        public void run()
         {
             IPAddress ip = IPAddress.Any;
             for (int i = 8310; i < 8320; i++)
             {
-                var r = new UDPSystem(i);
-                UDPSystems.Add(r);
+                var nextUDP = new UDPSystem(i);
+                UDPSystems.Add(nextUDP);
                 threads.Add(new Thread(new ThreadStart(UDPSystems[UDPSystems.Count - 1].Run)));
                 threads[threads.Count-1].Start();
             }
