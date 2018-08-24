@@ -12,8 +12,7 @@ namespace UDP_Test.UDP
     class UDPSystem
     {
         private UdpClient ServerIn;
-        ServersTo ServersToUsers = new ServersTo();
-
+        
         public UDPSystem(int PORT)
         {            
             ServerIn = new UdpClient(PORT);
