@@ -74,6 +74,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Settings.cs" />
     <Compile Include="UDP\UDPEmail.cs" />
     <Compile Include="UDP\UDPSystem.cs" />
   </ItemGroup>
