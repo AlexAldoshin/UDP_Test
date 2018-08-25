@@ -62,13 +62,38 @@
   <ItemGroup>
     <Compile Include="Act\ActWithServer.cs" />
     <Compile Include="DataPackets\IoT.cs" />
+    <Compile Include="DB\DataSetIoT.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>DataSetIoT.xsd</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
     <Compile Include="UDP\UDPEmail.cs" />
     <Compile Include="UDP\UDPSystem.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="DB\DataSetIoT.xsc">
+      <DependentUpon>DataSetIoT.xsd</DependentUpon>
+    </None>
+    <None Include="DB\DataSetIoT.xsd">
+      <SubType>Designer</SubType>
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>DataSetIoT.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="DB\DataSetIoT.xss">
+      <DependentUpon>DataSetIoT.xsd</DependentUpon>
+    </None>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.1">
