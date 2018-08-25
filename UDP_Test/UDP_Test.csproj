@@ -83,6 +83,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DB\dbo.KeysAPI.sql" />
+    <Content Include="DB\dbo.Users.sql" />
     <Content Include="DB\iot.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

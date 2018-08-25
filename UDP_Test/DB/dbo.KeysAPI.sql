@@ -1,0 +1,9 @@
+﻿CREATE TABLE [dbo].[KeysAPI]
+(
+	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
+    [KeyAPI] BINARY(12) NOT NULL 
+)
+
+GO
+
+CREATE UNIQUE INDEX [IX_KeyAPI] ON [dbo].[KeysAPI] ([KeyAPI])
