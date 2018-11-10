@@ -14,11 +14,11 @@ namespace UDP_Test.UDP
         private UdpClient ServerIn;
         public int ServerPort;
         public UDPSystem(int PORT)
-        {            
+        {
             ServerIn = new UdpClient(PORT);
             Console.WriteLine("Port: {0}", PORT);
-            ServerPort=PORT;
-        }        
+            ServerPort = PORT;
+        }
 
         public void Run()
         {
@@ -38,24 +38,24 @@ namespace UDP_Test.UDP
                 Console.WriteLine(exception);
                 throw;
             }
-        }  
+        }
         public void Stop()
         {
-        ServerIn.Close();
+            ServerIn.Close();
         }
         private void ToUserAsync(IPEndPoint IpEP, byte[] data)
-        {            
-            
+        {
+
             UdpClient ServerToUser = new UdpClient();
             try
             {
                 var ParsePacket = new DataPackets.NBIoT(data);
                 if (ParsePacket.DataOk)
-                    {
-                byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера
-                ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю 0 в конце
-                Console.WriteLine("Port:{2}; User:{0}; {1}", IpEP, ParsePacket, ServerPort);
-                    }
+                {
+                    byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера
+                    ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю 0 в конце
+                    Console.WriteLine("Port:{2}; User:{0}; {1}", IpEP, ParsePacket, ServerPort);
+                }
             }
             catch (Exception e)
             {
@@ -66,8 +66,8 @@ namespace UDP_Test.UDP
                 ServerToUser.Close(); // обязательно закроем
             }
 
-            
-            
+
+
         }
-    }    
+    }
 }
