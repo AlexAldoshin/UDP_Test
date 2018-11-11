@@ -22,8 +22,7 @@ namespace UDP_Test.UDP
             try
             {
                 while (true)
-                {
-                    //if (Serv.Available==0) Thread.Sleep(2000);
+                {                    
                     IPEndPoint IpEP = null;
                     byte[] data = ServerIn.Receive(ref IpEP); // получаем данные
                     Task task = new Task(() => ToUserAsync(IpEP, data));
@@ -43,24 +42,26 @@ namespace UDP_Test.UDP
         private void ToUserAsync(IPEndPoint IpEP, byte[] data)
         {
 
-            UdpClient ServerToUser = new UdpClient();
-            try
+            using (UdpClient ServerToUser = new UdpClient())
             {
-                var ParsePacket = new DataPackets.NBIoT(data);
-                if (ParsePacket.DataOk)
+                try
                 {
-                    byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера
-                    ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю 0 в конце
-                    Console.WriteLine("Port:{2}; User:{0}; {1}", IpEP, ParsePacket, ServerPort);
+                    var ParsePacket = new DataPackets.NBIoT(data);
+                    if (ParsePacket.DataOk)
+                    {
+                        byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
+                        ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
+                        Console.WriteLine("Port:{2}; User:{0}; {1}", IpEP, ParsePacket, ServerPort);
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-            finally
-            {
-                ServerToUser.Close(); // обязательно закроем
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                finally
+                {
+                    ServerToUser.Close(); // обязательно закроем
+                }
             }
 
 
