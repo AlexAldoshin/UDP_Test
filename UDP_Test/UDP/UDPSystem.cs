@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -10,8 +11,12 @@ namespace UDP_Test.UDP
     class UDPSystem
     {
         private UdpClient ServerIn;
+        private Dictionary<Guid, User> UsersCashe = new Dictionary<Guid, User>();
+        static object locker = new object();
+
         public int ServerPort;
         public UDPSystem(int PORT)
+
         {
             ServerIn = new UdpClient(PORT);
             Console.WriteLine("Port: {0}", PORT);
@@ -33,7 +38,6 @@ namespace UDP_Test.UDP
             catch (Exception exception)
             {
                 Console.WriteLine(exception);
-                throw;
             }
         }
         public void Stop()
@@ -45,44 +49,73 @@ namespace UDP_Test.UDP
 
             using (UdpClient ServerToUser = new UdpClient())
             {
-                try
+                //try
+                //{
+                var ParsePacket = new DataPackets.NBIoT(data);
+                if (ParsePacket.DataOk)
                 {
-                    var ParsePacket = new DataPackets.NBIoT(data);
-                    if (ParsePacket.DataOk)
+                    using (UserContext db = new UserContext())
                     {
-                        using (UserContext db = new UserContext())
-                        {
-                            db.Configuration.AutoDetectChangesEnabled = false;
-                            db.Configuration.ValidateOnSaveEnabled = false;
-                            var user = db.Users.Where(p => p.KeyAPI == ParsePacket.KeyAPI).First();
-                            if (user != null)
-                            {
-                                //Внесем данные устройства
-                                NBIoTData iotData = new NBIoTData {
-                                    UserId = user.Id, address = IpEP.Address.Address,
-                                    port = IpEP.Port, IdDev =ParsePacket.IdDev, IdMSG= ParsePacket.IdMSG,
-                                    IMEI = ParsePacket.IMEI, IMSI= ParsePacket.IMSI, Data= ParsePacket.Data };
-                                db.NBIoTDatas.Add(iotData);
-                                //добавляем в бд
-                                db.SaveChanges();
-                                Console.WriteLine("Данные сохранены. User=" + user.Id);
 
-                                byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
-                                ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
+
+                        db.Configuration.AutoDetectChangesEnabled = false;
+                        db.Configuration.ValidateOnSaveEnabled = false;
+
+
+                        User user;
+                        lock (locker)
+                        {
+                            if (UsersCashe.Count < 1)
+                            {
+                                user = db.Users.First();
+                                UsersCashe.Add(user.KeyAPI, user);
+                            }
+                            else
+                            {
+                                user = UsersCashe.First().Value;
+                            }
+                        }
+
+                        if (user != null)
+                        {
+                            //Внесем данные устройства
+                            NBIoTData iotData = new NBIoTData
+                            {
+                                UserId = user.Id,
+                                address = IpEP.Address.Address,
+                                port = IpEP.Port,
+                                IdDev = ParsePacket.IdDev,
+                                IdMSG = ParsePacket.IdMSG,
+                                IMEI = ParsePacket.IMEI,
+                                IMSI = ParsePacket.IMSI,
+                                Data = ParsePacket.Data
+                            };
+                            db.NBIoTDatas.Add(iotData);
+                            //добавляем в бд
+                            db.SaveChanges();
+                            //Console.WriteLine("Данные сохранены. User=" + user.Id);
+
+                            byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
+                            ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
+                            if (ParsePacket.IdMSG % 100 == 0)
+                            {
                                 Console.WriteLine("Port:{0}; User:{1}; {2}", ServerPort, IpEP, ParsePacket);
                             }
-                        }                        
+
+
+                        }
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                finally
-                {
-                    ServerToUser.Close(); // обязательно закроем
-                }
             }
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine(e.ToString());
+            //}
+            //finally
+            //{
+            //    ServerToUser.Close(); // обязательно закроем
+
+
 
 
 

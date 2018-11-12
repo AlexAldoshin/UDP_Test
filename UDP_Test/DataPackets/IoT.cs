@@ -17,15 +17,15 @@ namespace UDP_Test.DataPackets
 
         public IoT(byte[] packet)
         {
-            if (packet.Length > 17) // throw new ArgumentOutOfRangeException("packet", "packet Length < 14");
-            {
-                byte[] KeyAPIByte = new byte[16]; //GUID=16B
+            
+            
+                byte[] KeyAPIByte = new byte[16]; //GUID=16 Bytes
                 for (int i = 0; i < 16; i++)
                 {
                     KeyAPIByte[i] = packet[i];
                 }
                 KeyAPI = new Guid(KeyAPIByte);
-                //Загрузка 13-15 байтов 12..14
+            
                 byte* pp = stackalloc byte[3];
                 for (int i = 16; i < 19; i++)
                 {
@@ -33,7 +33,7 @@ namespace UDP_Test.DataPackets
                 }
                 IdMSG = *(ushort*)(pp); //
                 IdDev = *(pp + 2); //
-            }
+            
         }
 
         public override string ToString()
@@ -48,16 +48,16 @@ namespace UDP_Test.DataPackets
         public byte[] Data;
         public NBIoT(byte[] packet) : base(packet)
         {
-            if (packet.Length > 30) //throw new ArgumentOutOfRangeException("packet", "packet Length error");
+            if (packet.Length > 30) 
             {
-                byte* pp = stackalloc byte[16];
-                IMEI = *(ulong*)(pp);
-                IMSI = *(ulong*)(pp + 8);
-                Data = new byte[packet.Length - 35];
+                byte* pp = stackalloc byte[16];                
                 for (int i = 19; i < 35; i++)
                 {
                     pp[i - 19] = packet[i];
                 }
+                IMEI = *(ulong*)(pp);
+                IMSI = *(ulong*)(pp + 8);
+                Data = new byte[packet.Length - 35];
                 Array.Copy(packet, 35, Data, 0, packet.Length - 35);
                 DataOk = true;
             }
