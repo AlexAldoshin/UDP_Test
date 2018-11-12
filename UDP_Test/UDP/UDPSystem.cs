@@ -57,6 +57,7 @@ namespace UDP_Test.UDP
                             var user = db.Users.Where(p => p.KeyAPI == ParsePacket.KeyAPI).First();
                             if (user != null)
                             {
+                                //Внесем данные устройства
                                 NBIoTData iotData = new NBIoTData {
                                     UserId = user.Id, address = IpEP.Address.Address,
                                     port = IpEP.Port, IdDev =ParsePacket.IdDev, IdMSG= ParsePacket.IdMSG,
