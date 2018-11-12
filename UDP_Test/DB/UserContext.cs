@@ -9,10 +9,9 @@ namespace UDP_Test.DB
 {
     class UserContext : DbContext
     {
-        public UserContext() : base("IoTDB")
-        { }
+        public UserContext() : base("IoTDB") { }
 
         public DbSet<User> Users { get; set; }
-        public DbSet<Muser> Musers { get; set; }
+        public DbSet<NBIoTData> NBIoTDatas { get; set; }
     }
 }

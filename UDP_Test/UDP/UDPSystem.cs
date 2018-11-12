@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using UDP_Test.DB;
 
 namespace UDP_Test.UDP
 {
@@ -22,7 +23,7 @@ namespace UDP_Test.UDP
             try
             {
                 while (true)
-                {                    
+                {
                     IPEndPoint IpEP = null;
                     byte[] data = ServerIn.Receive(ref IpEP); // получаем данные
                     Task task = new Task(() => ToUserAsync(IpEP, data));
@@ -49,9 +50,27 @@ namespace UDP_Test.UDP
                     var ParsePacket = new DataPackets.NBIoT(data);
                     if (ParsePacket.DataOk)
                     {
-                        byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
-                        ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
-                        Console.WriteLine("Port:{2}; User:{0}; {1}", IpEP, ParsePacket, ServerPort);
+                        using (UserContext db = new UserContext())
+                        {
+                            db.Configuration.AutoDetectChangesEnabled = false;
+                            db.Configuration.ValidateOnSaveEnabled = false;
+                            var user = db.Users.Where(p => p.KeyAPI == ParsePacket.KeyAPI).First();
+                            if (user != null)
+                            {
+                                NBIoTData iotData = new NBIoTData {
+                                    UserId = user.Id, address = IpEP.Address.Address,
+                                    port = IpEP.Port, IdDev =ParsePacket.IdDev, IdMSG= ParsePacket.IdMSG,
+                                    IMEI = ParsePacket.IMEI, IMSI= ParsePacket.IMSI, Data= ParsePacket.Data };
+                                db.NBIoTDatas.Add(iotData);
+                                //добавляем в бд
+                                db.SaveChanges();
+                                Console.WriteLine("Данные сохранены. User=" + user.Id);
+
+                                byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
+                                ServerToUser.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
+                                Console.WriteLine("Port:{0}; User:{1}; {2}", ServerPort, IpEP, ParsePacket);
+                            }
+                        }                        
                     }
                 }
                 catch (Exception e)
