@@ -143,31 +143,30 @@ namespace UDP_Test.UDP
         {
             while (true)
             {
-                if (QueueNBIoTData.Count > 400)
+                if (QueueNBIoTData.Count > 200)
                 {
-                    Task task1 = new Task(() => Save100());
-                    task1.Start();
-                    Task task2 = new Task(() => Save100());
-                    task2.Start();
-                    Task task3 = new Task(() => Save100());
-                    task3.Start();
-                    Task task4 = new Task(() => Save100());
-                    task4.Start();
 
-                    task1.Wait();
-                    task2.Wait();
-                    task3.Wait();
-                    task4.Wait();
+                    int v = Math.Min(QueueNBIoTData.Count / 100, 20);  //создадим не более 20 потоков
+                    Task[] tasks = new Task[v];
+                    for (int i = 0; i < v; i++)
+                    {
+                        tasks[i] = Task.Run(() => Save(100));
+                    }
+                    Task.WaitAll(tasks);
                 }
                 else
                 {
-                    Thread.Sleep(10);
+                    Thread.Sleep(10); //не грузим проц
+                    if (QueueNBIoTData.Count > 0) // будем сохранять немного пока нет нагрузки
+                    {
+                        Save(QueueNBIoTData.Count);
+                    }
+
                 }
             }
-
         }
 
-        private void Save100()
+        private void Save(int count)
         {
             using (var db = new UserContext())
             {
@@ -175,13 +174,14 @@ namespace UDP_Test.UDP
                 db.Configuration.ValidateOnSaveEnabled = false;
 
                 NBIoTData iotd;
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < count; i++)
                 {
                     lock (locker)
                     {
                         iotd = QueueNBIoTData.Dequeue();
                     }
                     db.NBIoTDatas.Add(iotd);
+                    //SaveIoTData(db, iotd);
                 }
                 db.SaveChanges();
                 db.Dispose();
