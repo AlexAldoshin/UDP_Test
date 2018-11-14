@@ -23,7 +23,6 @@ namespace UDP_Test.Act
                 threads.Add(new Thread(new ThreadStart(UDPSystems[UDPSystems.Count - 1].Run)));
                 threads[threads.Count-1].Start();
             }
-
             Console.ReadLine();
         }
     }
