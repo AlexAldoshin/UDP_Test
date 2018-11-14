@@ -146,7 +146,7 @@ namespace UDP_Test.UDP
                 if (QueueNBIoTData.Count > 200)
                 {
 
-                    int v = Math.Min(QueueNBIoTData.Count / 100, 20);  //создадим не более 20 потоков
+                    int v = Math.Min(QueueNBIoTData.Count / 200, 20);  //создадим не более 20 потоков
                     Task[] tasks = new Task[v];
                     for (int i = 0; i < v; i++)
                     {
