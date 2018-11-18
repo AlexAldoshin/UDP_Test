@@ -16,7 +16,7 @@ namespace UDP_Test.Act
         public void run()
         {
             IPAddress ip = IPAddress.Any;
-            for (int i = 8310; i < 8320; i++)
+            for (int i = 8310; i < 8311; i++)
             {
                 var nextUDP = new UDPSystem(i);
                 UDPSystems.Add(nextUDP);
