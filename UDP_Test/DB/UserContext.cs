@@ -13,5 +13,6 @@ namespace UDP_Test.DB
 
         public DbSet<User> Users { get; set; }
         public DbSet<NBIoTData> NBIoTDatas { get; set; }
+        public DbSet<NBIoTCommand> NBIoTCommands { get; set; }
     }
 }

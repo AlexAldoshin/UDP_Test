@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Entity.Core.Objects;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
@@ -15,20 +16,22 @@ namespace UDP_Test.UDP
     class UDPSystem
     {
         static object locker = new object();
-        private UdpClient ServerIn;
-        private Dictionary<Guid, User> UsersCashe = new Dictionary<Guid, User>();
-        private int CounterForSaveData = 100;
+        private UdpClient ServerIn, ServerCommand;
 
-
+        private Dictionary<Guid, User> UsersCashe = new Dictionary<Guid, User>();        
+        private Dictionary<Tuple<int, byte>, bool> CommandBufer;
 
         private ConcurrentQueue<NBIoTData> QueueNBIoTData = new ConcurrentQueue<NBIoTData>();
         public int ServerPort;
-        public UDPSystem(int PORT)
-
+        public int CommandServerPort;
+        public UDPSystem(int PORT, int CommandPORT)
         {
             ServerIn = new UdpClient(PORT);
-            Console.WriteLine("Port: {0}", PORT);
+            ServerCommand = new UdpClient(CommandPORT);
+            Console.WriteLine("ServerPort: {0}  CommandServerPort: {1}", PORT, CommandPORT);
             ServerPort = PORT;
+            CommandServerPort = CommandPORT;
+            CommandBufer = new Dictionary<Tuple<int, byte>, bool>();
         }
 
         private void ToUserAsync(IPEndPoint IpEP, byte[] data)
@@ -36,7 +39,7 @@ namespace UDP_Test.UDP
             var ParsePacket = new DataPackets.NBIoT(data);
             if (ParsePacket.DataOk)
             {
-                User user;
+                User user = null;
                 if (UsersCashe.ContainsKey(ParsePacket.KeyAPI))
                 {
                     user = UsersCashe[ParsePacket.KeyAPI];
@@ -49,21 +52,15 @@ namespace UDP_Test.UDP
                         if (queryable.Count() > 0)
                         {
                             user = queryable.First();
-                        }
-                        else
-                        {
-                            db.Users.Add(new User { KeyAPI = ParsePacket.KeyAPI, Name = ParsePacket.KeyAPI.ToString() });
-                            db.SaveChanges();
-                            user = db.Users.Where(p => p.KeyAPI == ParsePacket.KeyAPI)?.First();
-                        }
-                    }
-                    lock (locker)
-                    {
-                        if (!UsersCashe.ContainsKey(ParsePacket.KeyAPI))
-                        {
-                            UsersCashe.Add(user.KeyAPI, user);
-                        }
-                    }
+                            lock (locker)
+                            {
+                                if (!UsersCashe.ContainsKey(ParsePacket.KeyAPI))
+                                {
+                                    UsersCashe.Add(user.KeyAPI, user);
+                                }
+                            }
+                        }                        
+                    }                    
                 }
 
                 if (user != null)
@@ -75,33 +72,87 @@ namespace UDP_Test.UDP
                         address = IpEP.Address.Address,
                         port = IpEP.Port,
                         IdDev = ParsePacket.IdDev,
-                        IdMSG = (short)ParsePacket.IdMSG,
-                        IMEI = (long)ParsePacket.IMEI,
-                        IMSI = (long)ParsePacket.IMSI,
+                        IdMSG = unchecked((short)ParsePacket.IdMSG),
+                        IMEI = unchecked((long)ParsePacket.IMEI),
+                        IMSI = unchecked((long)ParsePacket.IMSI),
                         Data = ParsePacket.Data
                     };
-
-                    //int buf = QueueNBIoTData.Count;
-
                     QueueNBIoTData.Enqueue(iotData);
+                    var IdMSGBytes = BitConverter.GetBytes(ParsePacket.IdMSG);
 
-                    //SaveIoTData(db, iotData);
-                    //добавляем в бд
-                    //db.NBIoTDatas.Add(iotData);
-                    //db.SaveChanges();
+                                        
+                    
+                        byte[] dgram = new byte[] { 0x4D, 0x53, 0x47, IdMSGBytes[0], IdMSGBytes[1] }; //Ответ MSG+IdMSG
 
-                    byte[] dgram = new byte[] { 0x64, 0x61, 0x74, 0x61, 0x20, 0x6f, 0x6b, 0x00 }; // ответ для примера 0 в конце
-                    ServerIn.Send(dgram, dgram.Length, IpEP); //отправим ответ пользователю
+                        var timeStart = DateTime.Now;
+                        bool newCommand = false;                        
 
-                    //
-                    //if (ParsePacket.IdMSG % 100 == 0)
-                    //{
-                    //    Console.WriteLine("Buf:{0}; Port:{1}; User:{2}; {3}", buf, ServerPort, IpEP, ParsePacket);
-                    //}
+                        while ((DateTime.Now - timeStart).Minutes<1)
+                        {
+                            var command = GetNewCommand(ParsePacket.IdDev, user.Id);
+                            if (command != null)
+                            {
+                                
+                                if ((ParsePacket.Data[ParsePacket.Data.Length - 1] != command[command.Length - 1]) ||
+                                    (ParsePacket.Data[ParsePacket.Data.Length - 2] != command[command.Length - 2]))
+                                {
+                                    var dgram_command = dgram.Concat(command).ToArray();
+                                    ServerIn.Send(dgram_command, dgram_command.Length, IpEP); //отправим ответ и команду
+                                    Console.SetCursorPosition(0, 6);
+                                    Console.Write("Send Commands            ");
+                                    newCommand = true;
+                                    break;
+                                }
+                                else
+                                {
+                                    Thread.Sleep(1000);
+                                }
+                            }                            
+                            Console.SetCursorPosition(0, 6);
+                            Console.Write("Сommand waiting {0} sec       ", (DateTime.Now - timeStart).Seconds);
+                        }
+                        if (!newCommand)
+                        {
+                            ServerIn.Send(dgram, dgram.Length, IpEP); //отправим ответ без команды
+                            Console.SetCursorPosition(0, 6);
+                            Console.Write("Send NoCommands       ");
+                        }                        
+                        Console.SetCursorPosition(0, 4);
+                        Console.Write("User IP {0}:{1} IMSI:{2} MSG:{3}       ", IpEP.Address, IpEP.Port, ParsePacket.IMSI, ParsePacket.IdMSG);
+                    
                 }
-
             }
         }
+
+        private byte[] GetNewCommand(byte IdDev, int userId)
+        {
+            byte[] NewCommand = null;            
+            var UserDevId = new Tuple<int, byte>(userId, IdDev);
+            if(!CommandBufer.ContainsKey(UserDevId))
+            {                
+                using(var db = new UserContext())
+                {
+                    NewCommand = db.NBIoTCommands
+                        .AsNoTracking()
+                        .Where(p => (p.UserId == userId && p.IdDev == IdDev))
+                        .ToArray()[0].Data;
+                    CommandBufer.Add(UserDevId, false);
+                }                
+            }
+            else if(CommandBufer[UserDevId])  // Есть новая команда
+                {                    
+                    using (var db = new UserContext())
+                    {
+                        NewCommand = db.NBIoTCommands
+                            .AsNoTracking()
+                            .Where(p => (p.UserId == userId && p.IdDev == IdDev))
+                            .ToArray()[0].Data;
+                        CommandBufer[UserDevId]=false;
+                    }                    
+                }
+            return NewCommand;
+        }
+
         private static void SaveIoTData(UserContext db, NBIoTData iotData)
         {
             var par = new Npgsql.NpgsqlParameter[] {
@@ -120,10 +171,13 @@ namespace UDP_Test.UDP
 
         public void Run()
         {
-         
-            //QueueNBIoTData.
+            //QueueNBIoTData. Очередь сообщений
             Task taskSave = new Task(() => SaveData());
             taskSave.Start();
+
+            //Сервер команд
+            Task taskCommanData = new Task(() => CommanDataServer());
+            taskCommanData.Start();
 
             while (true)
             {
@@ -138,6 +192,33 @@ namespace UDP_Test.UDP
                 {
 
                 }
+            }
+        }
+
+        private void CommanDataServer()
+        {
+            while (true)
+            {
+                try
+                {
+                    IPEndPoint IpEP = null;
+                    byte[] data = ServerCommand.Receive(ref IpEP); // получаем данные команд
+                    var userId = BitConverter.ToInt32(data, 0);
+                    var IdDev = data[4];
+                    var UserDevId = new Tuple<int, byte>(userId, IdDev);
+                    if(!CommandBufer.ContainsKey(UserDevId))
+                    {
+                        CommandBufer.Add(UserDevId, true);
+                    }
+                    else
+                    {
+                        CommandBufer[UserDevId]=true;
+                    }
+                }
+                catch (Exception ex)
+                {
+
+                }
 
             }
         }
@@ -147,23 +228,22 @@ namespace UDP_Test.UDP
             while (true)
             {
                 if (QueueNBIoTData.Count > 100)
-                {   
-                     var task = Task.Run(() => Save(100));                 
+                {
+                    var task = Task.Run(() => Save(100));
                 }
                 else
-                {                    
+                {
                     if (QueueNBIoTData.Count > 0) // будем сохранять немного пока нет нагрузки
                     {
                         Save(QueueNBIoTData.Count);
-                    }                    
+                    }
                 }
                 Thread.Sleep(10); //не грузим проц
             }
         }
 
         private void Save(int count)
-        {
-            Console.WriteLine("NewSave {0}", QueueNBIoTData.Count);
+        {                        
             int st = QueueNBIoTData.Count;
             using (var db = new UserContext())
             {
@@ -174,22 +254,19 @@ namespace UDP_Test.UDP
                 int i = count;
                 while (QueueNBIoTData.TryDequeue(out iotd) || (i-- < 1))
                 {
-                    if(iotd != null)
+                    if (iotd != null)
                     {
-                        db.NBIoTDatas.Add(iotd);                        
+                        db.NBIoTDatas.Add(iotd);
                     }
                 }
 
                 db.SaveChanges();
                 db.Dispose();
+                Console.SetCursorPosition(0, 2);
+                Console.Write("Buf:{0}; All_Start:{1}; All_Stop:{2}        ", count, st, QueueNBIoTData.Count);
 
-                Console.WriteLine("Buf:{0}; All_Start:{1}; All_Stop:{2}", count, st, QueueNBIoTData.Count);
             }
         }
-
-        public void Stop()
-        {
-            ServerIn.Close();
-        }
+           
     }
 }

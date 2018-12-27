@@ -86,6 +86,8 @@
   <ItemGroup>
     <Compile Include="Act\ActWithServer.cs" />
     <Compile Include="DataPackets\IoT.cs" />
+    <Compile Include="DB\NBIoTCommand.cs" />
+    <Compile Include="DB\NBIoTData.cs" />
     <Compile Include="DB\User.cs" />
     <Compile Include="DB\UserContext.cs" />
     <Compile Include="Program.cs" />
@@ -96,7 +98,6 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
-    <Compile Include="UDP\UDPEmail.cs" />
     <Compile Include="UDP\UDPSystem.cs" />
   </ItemGroup>
   <ItemGroup>
