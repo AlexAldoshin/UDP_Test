@@ -16,6 +16,7 @@ namespace UDP_Test.UDP
     class UDPSystem
     {
         static object locker = new object();
+        static object lockerCom = new object();
         private UdpClient ServerIn, ServerCommand;
 
         private Dictionary<Guid, User> UsersCashe = new Dictionary<Guid, User>();
@@ -24,6 +25,7 @@ namespace UDP_Test.UDP
         private ConcurrentQueue<NBIoTData> QueueNBIoTData = new ConcurrentQueue<NBIoTData>();
         public int ServerPort;
         public int CommandServerPort;
+        public int ConnectionCount = 0;
         public UDPSystem(int PORT, int CommandPORT)
         {
             ServerIn = new UdpClient(PORT);
@@ -36,6 +38,7 @@ namespace UDP_Test.UDP
 
         private void ToUserAsync(IPEndPoint IpEP, byte[] data)
         {
+            ConnectionCount++;
             var ParsePacket = new DataPackets.NBIoT(data);
             if (ParsePacket.DataOk)
             {
@@ -80,19 +83,20 @@ namespace UDP_Test.UDP
                     QueueNBIoTData.Enqueue(iotData);
                     var IdMSGBytes = BitConverter.GetBytes(ParsePacket.IdMSG);
 
-
+                    Console.SetCursorPosition(0, 4);
+                    Console.Write("User IP {0}:{1} IMSI:{2} MSG:{3}       ", IpEP.Address, IpEP.Port, ParsePacket.IMSI, ParsePacket.IdMSG);
 
                     byte[] dgram = new byte[] { 0x4D, 0x53, 0x47, IdMSGBytes[0], IdMSGBytes[1] }; //Ответ MSG+IdMSG
 
                     var timeStart = DateTime.Now;
                     bool newCommand = false;
-
+                    bool startCommand = true;
                     while ((DateTime.Now - timeStart).Minutes < 1)
                     {
-                        var command = GetNewCommand(ParsePacket.IdDev, user.Id);
+                        var command = GetNewCommand(ParsePacket.IdDev, user.Id, startCommand);
+                        startCommand = false;
                         if (command != null)
                         {
-
                             if ((ParsePacket.Data[ParsePacket.Data.Length - 1] != command[command.Length - 1]) ||
                                 (ParsePacket.Data[ParsePacket.Data.Length - 2] != command[command.Length - 2]))
                             {
@@ -117,15 +121,15 @@ namespace UDP_Test.UDP
                         ServerIn.Send(dgram, dgram.Length, IpEP); //отправим ответ без команды
                         Console.SetCursorPosition(0, 6);
                         Console.Write("Send NoCommands       ");
-                    }
-                    Console.SetCursorPosition(0, 4);
-                    Console.Write("User IP {0}:{1} IMSI:{2} MSG:{3}       ", IpEP.Address, IpEP.Port, ParsePacket.IMSI, ParsePacket.IdMSG);
-
+                    }                    
+                    Console.SetCursorPosition(0, 5);
+                    Console.Write("Connections: {0}       ", ConnectionCount);
                 }
             }
+            ConnectionCount--;
         }
 
-        private byte[] GetNewCommand(byte IdDev, int userId)
+        private byte[] GetNewCommand(byte IdDev, int userId, bool startCommand)
         {
             byte[] NewCommand = null;
             var UserDevId = new Tuple<int, byte>(userId, IdDev);
@@ -133,22 +137,32 @@ namespace UDP_Test.UDP
             {
                 using (var db = new UserContext())
                 {
-                    NewCommand = db.NBIoTCommands
+                    var sel = db.NBIoTCommands
                         .AsNoTracking()
                         .Where(p => (p.UserId == userId && p.IdDev == IdDev))
-                        .ToArray()[0].Data;
-                    CommandBufer.Add(UserDevId, false);
+                        .ToArray();
+                    if (sel.Count()>0) NewCommand = sel[0].Data;
+
+                    lock(lockerCom)
+                    {
+                        CommandBufer.Add(UserDevId, false);
+                    }
                 }
             }
-            else if (CommandBufer[UserDevId])  // Есть новая команда
+            else if (CommandBufer[UserDevId] || startCommand)  // Есть новая команда или первый запрос
             {
                 using (var db = new UserContext())
                 {
-                    NewCommand = db.NBIoTCommands
+                    var sel = db.NBIoTCommands
                         .AsNoTracking()
                         .Where(p => (p.UserId == userId && p.IdDev == IdDev))
-                        .ToArray()[0].Data;
-                    CommandBufer[UserDevId] = false;
+                        .ToArray();
+                    if (sel.Count() > 0) NewCommand = sel[0].Data;
+
+                    lock (lockerCom)
+                    {
+                        CommandBufer[UserDevId] = false;
+                    }
                 }
             }
             return NewCommand;
@@ -211,11 +225,17 @@ namespace UDP_Test.UDP
                     Console.Write("Command to {0}:{1}        ", userId, IdDev);
                     if (!CommandBufer.ContainsKey(UserDevId))
                     {
-                        CommandBufer.Add(UserDevId, true);
+                        lock(lockerCom)
+                        {
+                            CommandBufer.Add(UserDevId, true);
+                        }
                     }
                     else
                     {
-                        CommandBufer[UserDevId] = true;
+                        lock(lockerCom)
+                        {
+                            CommandBufer[UserDevId] = true;
+                        }
                     }
                 }
                 catch (Exception ex)
