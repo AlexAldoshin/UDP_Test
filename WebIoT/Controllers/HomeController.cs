@@ -13,6 +13,10 @@ namespace WebIoT.Controllers
             return View();
         }
 
+        //public ActionResult PushButton(int Rel, int OnOff)
+        //{
+        //    return View();
+        //}
         public ActionResult About()
         {
             ViewBag.Message = "Портал управления Интернет-вещами.";
