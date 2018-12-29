@@ -30,5 +30,20 @@ namespace WebIoT.Controllers
 
             return View();
         }
+
+        public EmptyResult RelaySet(int relay, byte set)
+        {
+            using (var db = new Models.DBContext())
+            {
+                var sel = db.NBIoTCommands.Where(p => (p.UserId == 9 && p.IdDev == 0)).FirstOrDefault();
+                var CurCommand = sel.Data;
+                CurCommand[relay-1] = set;
+                sel.Data = CurCommand;
+                db.SaveChanges();
+            }
+
+            return null;
+        }
+
     }
 }
