@@ -38,7 +38,9 @@ namespace WebIoT.Controllers
                 var sel = db.NBIoTCommands.Where(p => (p.UserId == 9 && p.IdDev == 0)).FirstOrDefault();
                 var CurCommand = sel.Data;
                 CurCommand[relay-1] = set;
+
                 sel.Data = CurCommand;
+                db.Entry(sel).State = System.Data.Entity.EntityState.Modified;
                 db.SaveChanges();
             }
 
