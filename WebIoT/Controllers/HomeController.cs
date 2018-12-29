@@ -43,7 +43,6 @@ namespace WebIoT.Controllers
                 db.Entry(sel).State = System.Data.Entity.EntityState.Modified;
                 db.SaveChanges();
             }
-
             return null;
         }
 
