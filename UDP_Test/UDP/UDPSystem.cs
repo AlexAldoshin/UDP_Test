@@ -78,7 +78,8 @@ namespace UDP_Test.UDP
                         IdMSG = unchecked((short)ParsePacket.IdMSG),
                         IMEI = unchecked((long)ParsePacket.IMEI),
                         IMSI = unchecked((long)ParsePacket.IMSI),
-                        Data = ParsePacket.Data
+                        Data = ParsePacket.Data,
+                        DateTime=DateTime.Now
                     };
                     QueueNBIoTData.Enqueue(iotData);
                     var IdMSGBytes = BitConverter.GetBytes(ParsePacket.IdMSG);

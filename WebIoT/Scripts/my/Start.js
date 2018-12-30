@@ -45,5 +45,15 @@ function loadData() {
     $.getJSON('/Home/LastDataGet', LastDataGetSuccess);
 }
 function LastDataGetSuccess(data) {
-    $('#BatLev').text("Напряжение батареи: " + data.LastData[45]/10 + " Вольт");
+
+    var text = "<p>Напряжение батареи: " + data.Ubat / 10 + " Вольт</p>";
+    text += "<p>Latitude:" + data.Latitude + "</p>";
+    text += "<p>Longitude:" + data.Longitude + "</p>";
+    text += "<p>Altitude:" + data.MSL_Altitude + "</p>";
+    text += "<p>Скорость:" + data.Speed_Over_Ground + "</p>";
+    text += "<p>Курс:" + data.Course_Over_Ground + "</p>";
+    text += "<p>Точность:" + ((data.HDOP + data.PDOP + data.VDOP) / 3).toFixed(1)  + "</p>";
+
+    $('#BatLev').html(text);
+
 }

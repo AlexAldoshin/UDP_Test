@@ -14,5 +14,6 @@ namespace UDP_Test.DB
         public long address { get; set; }
         public int port { get; set; }
         public byte[] Data { get; set; }
+        public DateTime DateTime { get; set; }
     }
 }

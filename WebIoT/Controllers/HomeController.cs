@@ -63,17 +63,38 @@ namespace WebIoT.Controllers
         }        
         public JsonResult LastDataGet()
         {
-            var ret = new Dictionary<string, byte[]>();
+            var ret = new Dictionary<string, object>();
             using (var db = new Models.DBContext())
             {
-                var sel = db.NBIoTDatas.Where(p => (p.UserId == 9 && p.IdDev == 0)).OrderByDescending(p=>p.Id).FirstOrDefault();
+                var sel = db.NBIoTDatas.Where(p => (p.UserId == 9 && p.IdDev == 0)).OrderByDescending(p=>p.DateTime).FirstOrDefault();
+                var UserDataShema = db.Users.Where(p => p.Id == 9).FirstOrDefault().DataShema;
                 var CurCommand = sel.Data;
+                var DataShemaRows = UserDataShema.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
+                int CommandOfset = 0;
+                foreach (string dataShemaRow in DataShemaRows)
+                {
+                    var Type_Name = dataShemaRow.Split(new string[] { "\t" }, StringSplitOptions.None);
+                    var dataType = Type_Name[0];
+                    var dataName = Type_Name[1];
 
-                //ret.Add("BatLev", (float)(CurCommand[CurCommand.Length-3])/10);
-                ret.Add("LastData", CurCommand);
-
+                    switch (dataType)
+                    {
+                        case "byte":
+                            ret.Add(dataName, CurCommand[CommandOfset]);
+                            CommandOfset++;
+                            break;
+                        case "ushort":
+                            ret.Add(dataName, BitConverter.ToUInt16(CurCommand, CommandOfset));
+                            CommandOfset += 2;
+                            break;
+                        case "float":
+                            ret.Add(dataName, BitConverter.ToSingle(CurCommand, CommandOfset));
+                            CommandOfset += 4;
+                            break;
+                    }
+                }
             }
             return Json(ret, JsonRequestBehavior.AllowGet);
-        }
+        }      
     }
 }
