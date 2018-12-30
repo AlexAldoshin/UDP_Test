@@ -2,15 +2,17 @@
     ViewBag.Title = "Home Page";
 }
 
-<div class="jumbotron">
-    <h1>IoTa</h1>
+<div class="jumbotron" style="height:300px">
+    @*<h1>IoTa</h1>
     <p class="lead">Платфома взаимодействия с интернет-вещами</p>
-    <p><a href=@Url.Action("About", "Home") class="btn btn-primary btn-lg">Узнать больше &raquo;</a></p>
+    <p><a href=@Url.Action("About", "Home") class="btn btn-primary btn-lg">Узнать больше &raquo;</a></p>*@
+
+    <div id="map" style="width:100%; height:100%"></div>
 </div>
 
 <div class="row">   
     <div class="col-md-8">
-        <h2>Получение информации</h2>
+        <h2>Управление</h2>
         <p>
             <button id="R1ON" type="button" class="btn btn-success" style="display: none;">Реле 1 выключено. Включить?</button>
             <button id="R1OFF" type="button" class="btn btn-danger" style="display: none;">Реле 1 включено.  Выключить?</button>
@@ -26,7 +28,7 @@
         </p>
     </div>
     <div class="col-md-4">
-        <h2>Управление данными</h2>
+        <h2>Настройка</h2>
         <p>РАЗДЕЛ В РАЗРАБОТКЕ</p>
         <p><a class="btn btn-default" href="">Узнать больше &raquo;</a></p>
     </div>
