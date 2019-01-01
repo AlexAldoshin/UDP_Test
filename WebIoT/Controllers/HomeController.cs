@@ -11,19 +11,13 @@ namespace WebIoT.Controllers
         public ActionResult Index()
         {
             return View();
-        }
-
-        //public ActionResult PushButton(int Rel, int OnOff)
-        //{
-        //    return View();
-        //}
+        }      
         public ActionResult About()
         {
             ViewBag.Message = "Портал управления Интернет-вещами.";
 
             return View();
         }
-
         public ActionResult Contact()
         {
             ViewBag.Message = "У вас есть вопросы или проблемы? Вы найдёте ответы после окончания тестирования.";
@@ -31,12 +25,16 @@ namespace WebIoT.Controllers
             return View();
         }
 
+        [Authorize]
         public JsonResult RelaySet(int relay, byte set)
         {
             var ret = new Dictionary<string, byte>();
             using (var db = new Models.DBContext())
             {
-                var sel = db.NBIoTCommands.Where(p => (p.UserId == 9 && p.IdDev == 0)).FirstOrDefault();
+                var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+                var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+                var sel = db.NBIoTCommands.Where(p => (p.UserId == UserData.Id && p.IdDev == 0)).FirstOrDefault();
+
                 var CurCommand = sel.Data;
                 CurCommand[relay-1] = set;
 
@@ -48,26 +46,32 @@ namespace WebIoT.Controllers
             }
             return Json(ret, JsonRequestBehavior.AllowGet);
         }
-
+        [Authorize]
         public JsonResult RelayGet()
         {
             var ret = new Dictionary<string, byte>();
             using (var db = new Models.DBContext())
             {
-                var sel = db.NBIoTCommands.Where(p => (p.UserId == 9 && p.IdDev == 0)).FirstOrDefault();
+                var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+                var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+                var sel = db.NBIoTCommands.Where(p => (p.UserId == UserData.Id && p.IdDev == 0)).FirstOrDefault();
+
                 var CurCommand = sel.Data;                
                 ret.Add("Rel1", CurCommand[0]);
                 ret.Add("Rel2", CurCommand[1]);
             }
             return Json(ret, JsonRequestBehavior.AllowGet);
-        }        
+        }
+        [Authorize]
         public JsonResult LastDataGet()
         {
-            var ret = new Dictionary<string, object>();
+            var ret = new Dictionary<string, object>();                        
             using (var db = new Models.DBContext())
             {
-                var sel = db.NBIoTDatas.Where(p => (p.UserId == 9 && p.IdDev == 0)).OrderByDescending(p=>p.DateTime).FirstOrDefault();
-                var UserDataShema = db.Users.Where(p => p.Id == 9).FirstOrDefault().DataShema;
+                var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+                var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+                var sel = db.NBIoTDatas.Where(p => (p.UserId == UserData.Id && p.IdDev == 0)).OrderByDescending(p=>p.DateTime).FirstOrDefault();
+                var UserDataShema = UserData.DataShema;
                 var CurCommand = sel.Data;
                 var DataShemaRows = UserDataShema.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
                 int CommandOfset = 0;

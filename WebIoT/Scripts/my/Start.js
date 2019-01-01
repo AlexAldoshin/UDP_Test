@@ -22,7 +22,6 @@ function init() {
 }
 
 
-
 $(function () {
     InitEvents();
     //$('#R1ON').show(200);
@@ -40,29 +39,34 @@ function InitEvents() {
     $('#R1OFF').click({ relay: 1, set: 0 }, RelaySet); // на кнопку прикрутим обработчик
     $('#R2ON').click({ relay: 2, set: 1 }, RelaySet); // на кнопку прикрутим обработчик
     $('#R2OFF').click({ relay: 2, set: 0 }, RelaySet); // на кнопку прикрутим обработчик
-
+    $('#FindDev').click(FindDev);
     setInterval('loadData()', 5000);
 }
+function FindDev() {
+    SetCurrentPos = 0;
+    loadData();
+}
+
 function RelaySet(eventObj) {  
 
     $.getJSON('/Home/RelaySet', { relay: eventObj.data.relay, set: eventObj.data.set }, RelaySetSuccess);
 }
 function RelaySetSuccess(data) {
     if (data.Rel1 == 0) {
-        $('#R1ON').show(100);
-        $('#R1OFF').hide(100);
+        $('#R1ON').show();
+        $('#R1OFF').hide();
     }
     else {
-        $('#R1ON').hide(100);
-        $('#R1OFF').show(100);
+        $('#R1ON').hide();
+        $('#R1OFF').show();
     }
     if (data.Rel2 == 0) {
-        $('#R2ON').show(100);
-        $('#R2OFF').hide(100);
+        $('#R2ON').show();
+        $('#R2OFF').hide();
     }
     else {
-        $('#R2ON').hide(100);
-        $('#R2OFF').show(100);
+        $('#R2ON').hide();
+        $('#R2OFF').show();
     }
 }
 function loadData() {
@@ -76,7 +80,7 @@ function LastDataGetSuccess(data) {
     text += "<p>Altitude:" + data.MSL_Altitude + "</p>";
     text += "<p>Скорость:" + data.Speed_Over_Ground + "</p>";
     text += "<p>Курс:" + data.Course_Over_Ground + "</p>";
-    text += "<p>Точность:" + ((data.HDOP + data.PDOP + data.VDOP) / 3).toFixed(1)  + "</p>";
+    text += "<p>Точность:" + ((data.HDOP + data.PDOP + data.VDOP)).toFixed(1)  + "</p>";
     $('#BatLev').html(text);
 
 
