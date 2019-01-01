@@ -12,5 +12,6 @@ namespace UDP_Test.DB
         public string Name { get; set; }
         public Guid KeyAPI { get; set; }
         public string DataShema { get; set; }
+        public Guid ReadKeyAPI { get; set; }
     }
 }

@@ -1,0 +1,79 @@
+﻿@model  WebIoT.Models.User
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+
+
+<div class="tabbable">
+    
+    <ul class="nav nav-tabs">
+        <li class="active"><a href="#tab1" data-toggle="tab">API KEYS</a></li>
+        <li><a href="#tab2" data-toggle="tab">Структура данных</a></li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane active" id="tab1">
+
+            <div class="col-xs-12 col-sm-6">
+                <h2>Key API для записи</h2>
+                <div class="well well-large">
+                    @Html.DisplayFor(modelItem => Model.KeyAPI)
+                </div>
+                <h2>Key API для чтения</h2>
+                <div class="well well-large">
+                    @Html.DisplayFor(modelItem => Model.ReadKeyAPI)
+                </div>
+                <button id="NewKeyAPIGen" type="button" class="btn btn-warning">Получить новый Key API для чтения</button>
+            </div>
+            <div class="col-xs-12 col-sm-6">
+                <h2>Помощь</h2>
+            </div>
+            </div>
+            <div class="tab-pane" id="tab2">
+                <p>Структура данных</p>
+            </div>
+        </div>
+</div>
+
+
+
+@*<table class="table">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.Name)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.KeyAPI)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.DataShema)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ReadKeyAPI)
+        </th>
+        <th></th>
+    </tr>
+
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => Model.Name)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => Model.KeyAPI)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => Model.DataShema)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => Model.ReadKeyAPI)
+        </td>
+        <td>
+            @Html.ActionLink("Edit", "Edit", new { id= Model.Id })             
+        </td>
+    </tr>
+
+
+</table>*@
