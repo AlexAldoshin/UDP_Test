@@ -19,6 +19,7 @@ namespace WebIoT.Controllers
         {
             var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
             var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+            ViewBag.Shema = GetShemaFromServer();
             return View(UserData);
         }
 
@@ -115,6 +116,43 @@ namespace WebIoT.Controllers
             db.Users.Remove(user);
             db.SaveChanges();
             return RedirectToAction("Index");
+        }
+
+
+        [Authorize]
+        public JsonResult ShemaGet()
+        {
+            Dictionary<string, string> ret = GetShemaFromServer();
+            return Json(ret, JsonRequestBehavior.AllowGet);
+        }
+
+        private Dictionary<string, string> GetShemaFromServer()
+        {
+            var ret = new Dictionary<string, string>();
+            var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+            var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+            var UserDataShema = UserData.DataShema;
+            var DataShemaRows = UserDataShema.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
+            foreach (string dataShemaRow in DataShemaRows)
+            {
+                var Type_Name = dataShemaRow.Split(new string[] { "\t" }, StringSplitOptions.None);
+                var dataType = Type_Name[0];
+                var dataName = Type_Name[1];
+                ret.Add(dataName, dataType);
+            }
+
+            return ret;
+        }
+
+        [Authorize]
+        public EmptyResult ShemaSet(string shema)
+        {            
+            var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+            var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+            UserData.DataShema = shema;
+            db.Entry(UserData).State = System.Data.Entity.EntityState.Modified;
+            db.SaveChanges();
+            return null;
         }
 
         protected override void Dispose(bool disposing)
