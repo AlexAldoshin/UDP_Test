@@ -20,6 +20,7 @@ namespace WebIoT.Controllers
             var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
             var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
             ViewBag.Shema = GetShemaFromServer();
+            ViewBag.Types = new List<string> {"byte","float","ushort"};
             return View(UserData);
         }
 
