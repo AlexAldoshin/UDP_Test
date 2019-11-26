@@ -71,7 +71,7 @@ namespace WebIoT.Controllers
             if (!ModelState.IsValid)
             {
                 return View(model);
-            }
+            }                                  
 
             // Сбои при входе не приводят к блокированию учетной записи
             // Чтобы ошибки при вводе пароля инициировали блокирование учетной записи, замените на shouldLockout: true
@@ -183,6 +183,17 @@ namespace WebIoT.Controllers
                 return View("Error");
             }
             var result = await UserManager.ConfirmEmailAsync(userId, code);
+            if(result.Succeeded)
+            {
+                using (ApplicationDbContext db = new ApplicationDbContext())
+                {
+                    User user1 = new User { Name = userId, KeyAPI = Guid.NewGuid(), ReadKeyAPI = Guid.NewGuid() };
+                    db.Users.Add(user1);
+                    NBIoTCommand UserCommand = new NBIoTCommand { IdDev = 0, DataShema = "byte\tUserData", User = user1, Data = new byte[] {0, 0} };
+                    db.NBIoTCommands.Add(UserCommand);
+                    db.SaveChanges();
+                }
+            }
             return View(result.Succeeded ? "ConfirmEmail" : "Error");
         }
 

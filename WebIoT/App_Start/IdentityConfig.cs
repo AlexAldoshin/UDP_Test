@@ -24,7 +24,7 @@ namespace WebIoT
             var pass = "QWopAS12";
 
             // адрес и порт smtp-сервера, с которого мы и будем отправлять письмо
-            SmtpClient client = new SmtpClient("localhost", 25);
+            SmtpClient client = new SmtpClient("smtp.mtom.by", 25);
 
             client.DeliveryMethod = SmtpDeliveryMethod.Network;
             client.UseDefaultCredentials = false;

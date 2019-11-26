@@ -8,32 +8,19 @@ using System.Threading.Tasks;
 namespace UDP_Test.DataPackets
 {
 
-    public unsafe abstract class IoT
+    public abstract class IoT
     {
         public bool DataOk = false;
-        public Guid KeyAPI;
+        public Guid KeyAPI;  //16b
         public ushort IdMSG; //2b
-        public byte IdDev; //1b                           
+        public uint IdDev;   //4b
 
         public IoT(byte[] packet)
         {
-            
-            
-                byte[] KeyAPIByte = new byte[16]; //GUID=16 Bytes
-                for (int i = 0; i < 16; i++)
-                {
-                    KeyAPIByte[i] = packet[i];
-                }
-                KeyAPI = new Guid(KeyAPIByte);
-            
-                byte* pp = stackalloc byte[3];
-                for (int i = 16; i < 19; i++)
-                {
-                    pp[i - 16] = packet[i];
-                }
-                IdMSG = *(ushort*)(pp); //
-                IdDev = *(pp + 2); //
-            
+            var StrGUID = BitConverter.ToString(packet, 0, 16);
+            KeyAPI = new Guid(StrGUID.Replace("-", ""));
+            IdMSG =  BitConverter.ToUInt16(packet, 16);
+            IdDev = BitConverter.ToUInt32(packet, 18);
         }
 
         public override string ToString()
@@ -41,24 +28,21 @@ namespace UDP_Test.DataPackets
             return String.Format("KeyAPI:{0}; IdMSG:{1}; IdDev:{2}", KeyAPI.ToString(), IdMSG, IdDev);
         }
     }
-    public unsafe class NBIoT : IoT
+    public class NBIoT : IoT
     {
         public ulong IMEI;
         public ulong IMSI;
+        public UInt16 TimeOut; 
         public byte[] Data;
         public NBIoT(byte[] packet) : base(packet)
         {
             if (packet.Length > 30) 
-            {
-                byte* pp = stackalloc byte[16];                
-                for (int i = 19; i < 35; i++)
-                {
-                    pp[i - 19] = packet[i];
-                }
-                IMEI = *(ulong*)(pp);
-                IMSI = *(ulong*)(pp + 8);
-                Data = new byte[packet.Length - 35];
-                Array.Copy(packet, 35, Data, 0, packet.Length - 35);
+            {                
+                IMEI = BitConverter.ToUInt64(packet, 22);
+                IMSI = BitConverter.ToUInt64(packet, 30);
+                TimeOut = BitConverter.ToUInt16(packet, 38);
+                Data = new byte[packet.Length - 40]; //Данные  пользователя
+                Array.Copy(packet, 40, Data, 0, Data.Length);
                 DataOk = true;
             }
         }

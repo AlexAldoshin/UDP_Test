@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNet.Identity.Owin;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
@@ -7,131 +8,65 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using WebIoT.Models;
+using System.Threading.Tasks;
+using System.Drawing;
 
 namespace WebIoT.Controllers
 {
+    [Authorize]
     public class UsersController : Controller
     {
-        private DBContext db = new DBContext();
+        private ApplicationDbContext db = new ApplicationDbContext();
+        private ApplicationUserManager _userManager;
+
+        public ApplicationUserManager UserManager
+        {
+            get
+            {
+                if (_userManager == null)
+                {
+                    _userManager = HttpContext.GetOwinContext().GetUserManager<ApplicationUserManager>();
+                }
+                return _userManager;
+            }         
+        }
 
         // GET: Users
-        public ActionResult Index()
-        {
-            var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
-            var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
-            ViewBag.Shema = GetShemaFromServer();
+        public async Task<ActionResult> Index()
+        {         
+            var UserID = await UserManager.FindByNameAsync(User.Identity.Name);
+            var UserData = db.Users.Where(p => p.Name == UserID.Id).FirstOrDefault();
+            ViewBag.Shema = await GetShemaFromServerAsync(0);
             ViewBag.Types = new List<string> {"byte","float","ushort"};
             return View(UserData);
         }
-
-        // GET: Users/Details/5
-        public ActionResult Details(int? id)
+                
+        public async Task<JsonResult> ShemaGet()
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            User user = db.Users.Find(id);
-            if (user == null)
-            {
-                return HttpNotFound();
-            }
-            return View(user);
-        }
-
-        // GET: Users/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: Users/Create
-        // Чтобы защититься от атак чрезмерной передачи данных, включите определенные свойства, для которых следует установить привязку. Дополнительные 
-        // сведения см. в статье https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "Id,Name,KeyAPI,DataShema,ReadKeyAPI")] User user)
-        {
-            if (ModelState.IsValid)
-            {
-                db.Users.Add(user);
-                db.SaveChanges();
-                return RedirectToAction("Index");
-            }
-
-            return View(user);
-        }
-
-        // GET: Users/Edit/5
-        public ActionResult Edit(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            User user = db.Users.Find(id);
-            if (user == null)
-            {
-                return HttpNotFound();
-            }
-            return View(user);
-        }
-
-        // POST: Users/Edit/5
-        // Чтобы защититься от атак чрезмерной передачи данных, включите определенные свойства, для которых следует установить привязку. Дополнительные 
-        // сведения см. в статье https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "Id,Name,KeyAPI,DataShema,ReadKeyAPI")] User user)
-        {
-            if (ModelState.IsValid)
-            {
-                db.Entry(user).State = EntityState.Modified;
-                db.SaveChanges();
-                return RedirectToAction("Index");
-            }
-            return View(user);
-        }
-
-        // GET: Users/Delete/5
-        public ActionResult Delete(int? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            User user = db.Users.Find(id);
-            if (user == null)
-            {
-                return HttpNotFound();
-            }
-            return View(user);
-        }
-
-        // POST: Users/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public ActionResult DeleteConfirmed(int id)
-        {
-            User user = db.Users.Find(id);
-            db.Users.Remove(user);
-            db.SaveChanges();
-            return RedirectToAction("Index");
-        }
-
-
-        [Authorize]
-        public JsonResult ShemaGet()
-        {
-            Dictionary<string, string> ret = GetShemaFromServer();
+            var ret = await GetShemaFromServerAsync(0);
             return Json(ret, JsonRequestBehavior.AllowGet);
         }
 
-        private Dictionary<string, string> GetShemaFromServer()
+        public async Task<JsonResult> ChangeReadAPIKey()
         {
-            var ret = new Dictionary<string, string>();
-            var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
-            var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+            var ret = new Dictionary<string, Guid>();
+            var UserID = await UserManager.FindByNameAsync(User.Identity.Name);
+            var UserData = db.Users.Where(p => p.Name == UserID.Id).FirstOrDefault();
+            Guid NewReadAPI = Guid.NewGuid();
+            UserData.ReadKeyAPI = NewReadAPI;
+            db.Entry(UserData).State = System.Data.Entity.EntityState.Modified;
+            db.SaveChanges();
+            ret.Add("ReadAPIKey", NewReadAPI);
+            return Json(ret, JsonRequestBehavior.AllowGet);
+        }
+
+
+        private async Task<Dictionary<string, string>> GetShemaFromServerAsync(int dev_id)
+        {
+            var ret = new Dictionary<string, string>();           
+            var UserID = await UserManager.FindByNameAsync(User.Identity.Name);
+            var UserData = db.Users.Join(db.NBIoTCommands, p => p.Id, c => c.UserId, (p, c) => new { p.Name, c.IdDev, c.DataShema }).FirstOrDefault(d => d.Name == UserID.Id && d.IdDev == dev_id);
+            
             var UserDataShema = UserData.DataShema;
             var DataShemaRows = UserDataShema.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None);
             foreach (string dataShemaRow in DataShemaRows)
@@ -141,19 +76,76 @@ namespace WebIoT.Controllers
                 var dataName = Type_Name[1];
                 ret.Add(dataName, dataType);
             }
-
             return ret;
         }
 
-        [Authorize]
-        public EmptyResult ShemaSet(string shema)
+        
+        public async Task<EmptyResult> ShemaSetAsync(int dev_id, string shema)
         {            
-            var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
-            var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
-            UserData.DataShema = shema;
-            db.Entry(UserData).State = System.Data.Entity.EntityState.Modified;
+           // var UserID = ((System.Security.Claims.ClaimsPrincipal)User).Claims.ToArray()[0].Value; //Получим ID пользователя из AspNetUsers
+           // var UserData = db.Users.Where(p => p.Name == UserID).FirstOrDefault();
+
+            var UserID = await UserManager.FindByNameAsync(User.Identity.Name);
+            var UserData = db.Users.FirstOrDefault(d => d.Name == UserID.Id);
+            var DevComm =  db.NBIoTCommands.FirstOrDefault(p => p.UserId == UserData.Id && p.IdDev == dev_id);
+            DevComm.DataShema = shema;
+            db.Entry(DevComm).State = System.Data.Entity.EntityState.Modified;
             db.SaveChanges();
             return null;
+        }
+
+
+        [HttpPost]
+        public JsonResult Upload()
+        {
+            int IdDev = 0;
+            foreach (string file in Request.Files)
+            {
+                var upload = Request.Files[file];
+                if (upload != null)
+                {
+                    // получаем файл. конвертим в jpg 400x300
+                    string fileName = System.IO.Path.GetFileName(upload.FileName);                    
+                    Bitmap bm = new Bitmap(Image.FromStream(upload.InputStream), 400, 300);
+                    var memStream = new System.IO.MemoryStream();
+                    bm.Save(memStream, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                    //Получаем текущего юзера
+                    var UserIDAsync = UserManager.FindByNameAsync(User.Identity.Name);
+                    UserIDAsync.Wait();
+                    var UserID = UserIDAsync.Result;
+
+                    //Сохраним каритинку
+                    var UserData = db.Users.FirstOrDefault(d => d.Name == UserID.Id);
+                    var DevComm = db.NBIoTCommands.FirstOrDefault(p => p.UserId == UserData.Id && p.IdDev == IdDev);
+                    DevComm.Image = memStream.ToArray();
+                    db.Entry(DevComm).State = System.Data.Entity.EntityState.Modified;
+                    db.SaveChanges();
+                }
+            }
+            return Json("файл загружен");
+        }
+
+        public FileResult Img(int IdDev)
+        {
+            //Получим данные авторизов. юзера
+            //var UserID = await UserManager.FindByNameAsync(User.Identity.Name);
+
+            var UserIDAsync = UserManager.FindByNameAsync(User.Identity.Name);
+            UserIDAsync.Wait();
+            var UserID = UserIDAsync.Result;
+
+            //Получим данные устройств этого юзера
+            var DeviceImage = db.Users.
+                Join(db.NBIoTCommands, pUser => pUser.Id, cDevice => cDevice.UserId, (pUser, cDevice) =>
+                new 
+                {
+                    UserNameId = pUser.Name,                    
+                    IdDev = cDevice.IdDev,                    
+                    DeviceImage = cDevice.Image
+                }).
+                FirstOrDefault(d => d.UserNameId == UserID.Id && d.IdDev == IdDev).DeviceImage;
+            return File(DeviceImage, "image/jpeg", "img" + IdDev + ".jpg");
         }
 
         protected override void Dispose(bool disposing)
@@ -161,7 +153,13 @@ namespace WebIoT.Controllers
             if (disposing)
             {
                 db.Dispose();
+                if (_userManager != null)
+                {
+                    _userManager.Dispose();
+                    _userManager = null;
+                }
             }
+           
             base.Dispose(disposing);
         }
     }

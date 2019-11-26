@@ -14,6 +14,9 @@
                 <li class="nav-item">
                     <a class="nav-link" id="shema-tab" data-toggle="tab" href="#tab2" role="tab" aria-controls="profile" aria-selected="false">Структура данных</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="description-tab" data-toggle="tab" href="#tab3" role="tab" aria-controls="profile" aria-selected="false">Описание</a>
+                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -26,10 +29,33 @@
                                 @Html.DisplayFor(modelItem => Model.KeyAPI)
                             </div>
                             <h2>Key API для чтения</h2>
-                            <div class="alert alert-dark" role="alert">
+                            <div class="alert alert-dark" role="alert" id="ReadAPIKey">
                                 @Html.DisplayFor(modelItem => Model.ReadKeyAPI)
                             </div>
-                            <button id="NewKeyAPIGen" type="button" class="btn btn-warning">Получить новый Key API для чтения</button>
+                            <button id="NewKeyAPIGen" type="button" class="btn btn-warning" data-toggle="modal" data-target="#ConfirmNewKeyModal">
+                                Получить новый Key API для чтения
+                            </button>
+                            <!-- Modal -->
+                            <div class="modal fade" id="ConfirmNewKeyModal" tabindex="-1" role="dialog" aria-labelledby="ConfirmNewKeyModalTitle" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="exampleModalLongTitle">Внимание!</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <h2> Вы уверены в необходимости смены ключа?</h2>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                                            <button type="button" class="btn btn-danger" id="ChangeReadAPIKey">Сменить</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                         <div class="col-sm-6">
                             <h2>Помощь</h2>
@@ -52,7 +78,6 @@
                                     @{ int ShemaItemId = 0; }
                                     @foreach (KeyValuePair<string, string> ShemaItem in ViewBag.Shema)
                                     {
-
                                         <tr>
                                             <td>
                                                 <input class="form-control form-control-sm" type="text" value="@ShemaItem.Key">
@@ -69,7 +94,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group" aria-label="BtnGR" id="ShemaItemId_@ShemaItemId">
-                                                    <button type="button" class="btn btn-success">+</button>                                                    
+                                                    <button type="button" class="btn btn-success">+</button>
                                                     <button type="button" class="btn btn-danger">-</button>
                                                 </div>
                                             </td>
@@ -78,6 +103,26 @@
                                     }
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="col-sm-6">
+                            <h2>Помощь</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="tab3" role="tabpanel" aria-labelledby="profile-tab">
+                    <div class="row">
+                        <div class="col-sm-6 text-left">
+                            <h2>Описание</h2>
+                            <div class="form-group">
+                                <label for="File1">Выбрать изображение устройства</label>
+                                <input type="file" class="form-control-file" id="File1">
+                            </div>
+                            <button type="submit" class="btn btn-primary" onclick="SendDeviceImageFile()">Отправить</button>
+                            <div>
+                                <img id="ImgDev" src="/Users/Img?IdDev=0" class="rounded float-left" alt="300x400">
+
+
+                            </div>
                         </div>
                         <div class="col-sm-6">
                             <h2>Помощь</h2>

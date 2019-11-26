@@ -1,4 +1,6 @@
 ﻿@{
+    /**/
+
     ViewBag.Title = "Начало";
 }
 
@@ -6,11 +8,23 @@
     <div class="col-md-9">
         <h2>Карта</h2>
         <p>
-            <button id="FindDev" type="button" class="btn btn-success">Найти</button>
+            <div class="btn-group" role="group" aria-label="BtnGrMap">
+                <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseMap" aria-expanded="false" aria-controls="collapseMap">
+                    Открыть
+                </button>
+                <button id="FindDev" type="button" class="btn btn-success">Найти</button>
+
+            </div>
         </p>
-        <div class="well well-small" style="height:350px">
-            <div id="map" style="width:100%; height:100%"></div>
+        <div class="collapse" id="collapseMap">
+            <div class="well well-small" style="height:350px">
+                <div id="map" style="width:100%; height:100%"></div>
+            </div>
         </div>
+        @if (Request.IsAuthenticated)
+        {        
+        <div class="" id="devices"></div>
+        }
     </div>
     <div class="col-md-3">
         <h2>Управление</h2>
@@ -25,6 +39,9 @@
                 <button id="R2OFF" type="button" class="btn btn-danger" style="display: none;">Реле 2 включено.  Выключить?</button>
             </p>
             <p>
+                <button id="ReadData" type="button" class="btn btn-success">Выбор</button>
+            </p>
+            <p>
                 <div id="BatLev" class="well">
 
                 </div>
@@ -33,11 +50,9 @@
         else
         {
             <h2>Нет доступа!</h2>
-            <div class="well">
-                @Html.ActionLink("Регистрация", "Register", "Account", routeValues: null, htmlAttributes: new { id = "registerLink" })
-            </div>
-            <div class="well">
-                @Html.ActionLink("Выполнить вход", "Login", "Account", routeValues: null, htmlAttributes: new { id = "loginLink" })
+            <div>
+                @Html.ActionLink("Регистрация", "Register", "Account", routeValues: null, htmlAttributes: new { id = "registerLink", @class = "btn btn-outline-primary btn-block" })
+                @Html.ActionLink("Выполнить вход", "Login", "Account", routeValues: null, htmlAttributes: new { id = "loginLink", @class = "btn btn-outline-success btn-block" })
             </div>
         }
     </div>

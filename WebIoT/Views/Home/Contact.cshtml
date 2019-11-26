@@ -8,9 +8,12 @@
     Беларусь<br />
     Минск<br />
     <abbr title="Телефон">P:</abbr>
-    +375-29-XXX-XX-XX
+    +375-29-777-XX-XX
 </address>
 
-<address>
-    <strong>Техподдержка:</strong>   <a href="mailto:Support@iota.com">Support@iota.com</a><br />    
-</address>
+@if (Request.IsAuthenticated)
+{
+    <address>
+        <strong>Техподдержка:</strong>   <a href="mailto:Support@mtom.by">Support@mtom.by</a><br />
+    </address>
+}

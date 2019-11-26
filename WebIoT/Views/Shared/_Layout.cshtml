@@ -4,22 +4,29 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <META name="description" content="Сайт MtoM.by - это платформа для работы интернет-вещей, которые используют технологии NB-IoT, 2G, 3G, 4G, WiFi">
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
-    <title>@ViewBag.Title – IoTa</title>
+    <title>@ViewBag.Title – M2M</title>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow">
         <div class="container">
-            @Html.ActionLink("IoTa", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+            @Html.ActionLink("MtoM", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
-                    <li class="nav-item active">@Html.ActionLink("Главная", "Index", "Home", new { @class = "nav-link" })</li>
-                    <li class="nav-item">@Html.ActionLink("О программе", "About", "Home", new { @class = "nav-link" })</li>
-                    <li class="nav-item">@Html.ActionLink("Контакт", "Contact", "Home", new { @class = "nav-link" })</li>
+                    <li class="nav-item active">@Html.ActionLink("Главная", "Index", "Home", null, new { @class = "nav-link" })</li>
+                    <li class="nav-item">@Html.ActionLink("О программе", "About", "Home", null, new { @class = "nav-link" })</li>
+                    <li class="nav-item">@Html.ActionLink("Контакт", "Contact", "Home", null, new { @class = "nav-link" })</li>
+
+                    @if (Request.IsAuthenticated)
+                    {
+                        <li class="nav-item">@Html.ActionLink("Управление", "Index", "Users", null, new { @class = "nav-link" })</li>
+                    }
+
                 </ul>
                 @Html.Partial("_LoginPartial")
             </div>
@@ -29,16 +36,14 @@
         @RenderBody()
         <hr />
         <footer>
-            <p>&copy; @DateTime.Now.Year – продукт IoTa</p>
+            <p>&copy; @DateTime.Now.Year – продукт MtoM</p>
         </footer>
     </div>
-
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/popper")
     @Scripts.Render("~/bundles/bootstrap")
     @RenderSection("scripts", required: false)
     <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&amp;apikey=524d7dbd-d08d-4f59-a5cb-e7f38a17f3fb" type="text/javascript"></script>
     <script src="~/Scripts/my/Start.js" type="text/javascript"></script>
-
 </body>
 </html>

@@ -20,7 +20,7 @@ namespace UDP_Test.UDP
         private UdpClient ServerIn, ServerCommand;
 
         private Dictionary<Guid, User> UsersCashe = new Dictionary<Guid, User>();
-        private Dictionary<Tuple<int, byte>, bool> CommandBufer;
+        private Dictionary<Tuple<int, int>, bool> CommandBufer;
 
         private ConcurrentQueue<NBIoTData> QueueNBIoTData = new ConcurrentQueue<NBIoTData>();
         public int ServerPort;
@@ -33,12 +33,12 @@ namespace UDP_Test.UDP
             Console.WriteLine("ServerPort: {0}  CommandServerPort: {1}", PORT, CommandPORT);
             ServerPort = PORT;
             CommandServerPort = CommandPORT;
-            CommandBufer = new Dictionary<Tuple<int, byte>, bool>();
+            CommandBufer = new Dictionary<Tuple<int, int>, bool>();
         }
 
         private void ToUserAsync(IPEndPoint IpEP, byte[] data)
         {
-            ConnectionCount++;
+            ConnectionCount++; //Еще один девайс
             var ParsePacket = new DataPackets.NBIoT(data);
             if (ParsePacket.DataOk)
             {
@@ -74,7 +74,7 @@ namespace UDP_Test.UDP
                         UserId = user.Id,
                         address = IpEP.Address.Address,
                         port = IpEP.Port,
-                        IdDev = ParsePacket.IdDev,
+                        IdDev = unchecked((int)ParsePacket.IdDev),
                         IdMSG = unchecked((short)ParsePacket.IdMSG),
                         IMEI = unchecked((long)ParsePacket.IMEI),
                         IMSI = unchecked((long)ParsePacket.IMSI),
@@ -85,37 +85,33 @@ namespace UDP_Test.UDP
                     var IdMSGBytes = BitConverter.GetBytes(ParsePacket.IdMSG);
 
                     Console.SetCursorPosition(0, 4);
-                    Console.Write("User IP {0}:{1} IMSI:{2} MSG:{3}       ", IpEP.Address, IpEP.Port, ParsePacket.IMSI, ParsePacket.IdMSG);
+                    Console.Write("User IP {0}:{1} IMSI:{2} MSG:{3} TimeOut:{4}     ", IpEP.Address, IpEP.Port, ParsePacket.IMSI, ParsePacket.IdMSG, ParsePacket.TimeOut);
 
                     byte[] dgram = new byte[] { 0x4D, 0x53, 0x47, IdMSGBytes[0], IdMSGBytes[1] }; //Ответ MSG+IdMSG
 
                     var timeStart = DateTime.Now;
                     bool newCommand = false;
                     bool startCommand = true;
-                    while ((DateTime.Now - timeStart).Minutes < 1)
+                    while ((DateTime.Now - timeStart).TotalSeconds < ParsePacket.TimeOut) //Устройство задает время ожидания команды
                     {
-                        var command = GetNewCommand(ParsePacket.IdDev, user.Id, startCommand);
+                        var command = GetNewCommand(unchecked((int)ParsePacket.IdDev), user.Id, startCommand);
                         startCommand = false;
                         if (command != null)
                         {
-                            if ((ParsePacket.Data[ParsePacket.Data.Length - 1] != command[command.Length - 1]) ||
-                                (ParsePacket.Data[ParsePacket.Data.Length - 2] != command[command.Length - 2]))
+                            //Сравним старые и новые команды                            
+                            if (TestBytes(command, ParsePacket.Data)) // Команды в конце пакета. Если была новая команда - работаем
                             {
-                                var dgram_command = dgram.Concat(command).ToArray();
+                                var dgram_command = dgram.Concat(command).ToArray(); //Объеденим ответ (MSG+IdMSG) и команды 
                                 ServerIn.Send(dgram_command, dgram_command.Length, IpEP); //отправим ответ и команду
                                 Console.SetCursorPosition(0, 6);
                                 Console.Write("Send Commands            ");
                                 newCommand = true;
                                 break;
                             }
-                            else
-                            {
-
-                            }
                         }
-                        Thread.Sleep(1000);
+                        Thread.Sleep(1000); // Спим 1 сек.
                         Console.SetCursorPosition(0, 6);
-                        Console.Write("Сommand waiting {0} sec       ", (DateTime.Now - timeStart).Seconds);
+                        Console.Write("Сommand waiting {0} sec       ", (DateTime.Now - timeStart).TotalSeconds);
                     }
                     if (!newCommand)
                     {
@@ -127,26 +123,44 @@ namespace UDP_Test.UDP
                     Console.Write("Connections: {0}       ", ConnectionCount);
                 }
             }
-            ConnectionCount--;
+            ConnectionCount--; // Одним девайсом меньше
         }
 
-        private byte[] GetNewCommand(byte IdDev, int userId, bool startCommand)
+        /// <summary>
+        /// Команды соответствуют структуре данных от устройства. Сверка идет с конца
+        /// </summary>
+        /// <param name="newData">Данные для сверки. Длина newData не более oldData</param>
+        /// <param name="oldData">То с чем сверяем</param>
+        /// <returns>Если есть отличия  -  true</returns>
+        private static bool TestBytes(byte[] newData, byte[] oldData)
+        {
+            for (int i = 1; i <= newData.Length; i++)
+            {
+                if (oldData[oldData.Length - i] != newData[newData.Length - i])
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private byte[] GetNewCommand(int IdDev, int userId, bool startCommand)
         {
             byte[] NewCommand = null;
-            var UserDevId = new Tuple<int, byte>(userId, IdDev);
+            var UserDevId = new Tuple<int, int>(userId, IdDev);
             if (!CommandBufer.ContainsKey(UserDevId))
             {
                 using (var db = new UserContext())
                 {
-                    var sel = db.NBIoTCommands
-                        .AsNoTracking()
-                        .Where(p => (p.UserId == userId && p.IdDev == IdDev))
-                        .ToArray();
-                    if (sel.Count()>0) NewCommand = sel[0].Data;
-
-                    lock(lockerCom)
+                    var sel = db.NBIoTCommands.AsNoTracking()
+                        .FirstOrDefault(p => (p.UserId == userId && p.IdDev == IdDev));
+                    if(sel != null)
                     {
-                        CommandBufer.Add(UserDevId, false);
+                        NewCommand = sel.Data;
+                        lock(lockerCom)
+                        {
+                            CommandBufer.Add(UserDevId, false);
+                        }
                     }
                 }
             }
@@ -154,37 +168,20 @@ namespace UDP_Test.UDP
             {
                 using (var db = new UserContext())
                 {
-                    var sel = db.NBIoTCommands
-                        .AsNoTracking()
-                        .Where(p => (p.UserId == userId && p.IdDev == IdDev))
-                        .ToArray();
-                    if (sel.Count() > 0) NewCommand = sel[0].Data;
-
-                    lock (lockerCom)
+                    var sel = db.NBIoTCommands.AsNoTracking()
+                        .FirstOrDefault(p => (p.UserId == userId && p.IdDev == IdDev));
+                    if(sel != null)
                     {
-                        CommandBufer[UserDevId] = false;
+                        NewCommand = sel.Data;
+                        lock(lockerCom)
+                        {
+                            CommandBufer[UserDevId] = false;
+                        }
                     }
                 }
             }
             return NewCommand;
-        }
-
-        private static void SaveIoTData(UserContext db, NBIoTData iotData)
-        {
-            var par = new Npgsql.NpgsqlParameter[] {
-
-                            new Npgsql.NpgsqlParameter("@p1", iotData.UserId) ,
-                            new Npgsql.NpgsqlParameter("@p2", iotData.IdMSG),
-                            new Npgsql.NpgsqlParameter("@p3", iotData.IdDev),
-                            new Npgsql.NpgsqlParameter("@p4", iotData.IMEI),
-                            new Npgsql.NpgsqlParameter("@p5", iotData.IMSI),
-                            new Npgsql.NpgsqlParameter("@p6", iotData.address),
-                            new Npgsql.NpgsqlParameter("@p7", iotData.port),
-                            new Npgsql.NpgsqlParameter("@p8", iotData.Data)
-                        };
-            db.Database.ExecuteSqlCommand("INSERT INTO dbo.\"NBIoTDatas\"( \"UserId\", \"IdMSG\", \"IdDev\", \"IMEI\", \"IMSI\", address, port, \"Data\") VALUES (@p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8)", par);
-        }
-
+        }               
         public void Run()
         {
             //QueueNBIoTData. Очередь сообщений
@@ -194,7 +191,6 @@ namespace UDP_Test.UDP
             //Сервер команд
             Task taskCommanData = new Task(() => CommanDataServer());
             taskCommanData.Start();
-
             while (true)
             {
                 try
@@ -220,8 +216,8 @@ namespace UDP_Test.UDP
                     IPEndPoint IpEP = null;
                     byte[] data = ServerCommand.Receive(ref IpEP); // получаем данные команд
                     var userId = BitConverter.ToInt32(data, 0);
-                    var IdDev = data[4];
-                    var UserDevId = new Tuple<int, byte>(userId, IdDev);
+                    var IdDev = BitConverter.ToInt32(data, 4);
+                    var UserDevId = new Tuple<int, int>(userId, IdDev);
                     Console.SetCursorPosition(0, 8);
                     Console.Write("Command to {0}:{1}        ", userId, IdDev);
                     if (!CommandBufer.ContainsKey(UserDevId))
